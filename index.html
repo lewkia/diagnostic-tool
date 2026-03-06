@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Razer IT Diagnostic Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* =============================================
+       SCROLLBAR
+    ============================================= */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #00ff00; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #44d62c; }
+
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(0,255,0,0.04) 1px, transparent 0);
+      background-size: 32px 32px;
+    }
+
+    /* Hex grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='92' viewBox='0 0 80 92'%3E%3Cpolygon points='40,4 76,23 76,69 40,88 4,69 4,23' fill='none' stroke='rgba(0,255,0,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+      background-size: 80px 92px;
+      z-index: 0;
+    }
+
+    /* =============================================
+       HEADER
+    ============================================= */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #0a0a0a;
+      border-bottom: 1px solid #00ff00;
+      box-shadow: 0 0 20px rgba(0,255,0,0.3), 0 2px 30px rgba(0,255,0,0.1);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 20px,
+        rgba(0,255,0,0.012) 20px,
+        rgba(0,255,0,0.012) 40px
+      );
+      pointer-events: none;
+    }
+
+    #header-logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    #header-title {
+      flex: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    #header-title h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #00ff00;
+      text-shadow: 0 0 10px rgba(0,255,0,0.5);
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+
+    #header-title .subtitle {
+      font-size: 12px;
+      color: #44d62c;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    #header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    #live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #00ff00;
+      letter-spacing: 2px;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    #live-dot {
+      width: 8px;
+      height: 8px;
+      background: #00ff00;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #00ff00;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px #00ff00; }
+      50% { opacity: 0.4; box-shadow: 0 0 2px #00ff00; }
+    }
+
+    #clock {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+
+    /* =============================================
+       EXPORT BUTTONS
+    ============================================= */
+    #export-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px;
+      background: #0d0d0d;
+      border-bottom: 1px solid #1a1a1a;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+      background: #000;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,255,0,0);
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      box-shadow: 0 0 12px rgba(0,255,0,0.5), 0 0 24px rgba(0,255,0,0.2);
+      color: #fff;
+    }
+
+    .btn:hover::before { background: rgba(0,255,0,0.07); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-run {
+      border-color: #00ff00;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      padding: 9px 20px;
+    }
+
+    /* =============================================
+       LOADING BAR
+    ============================================= */
+    #loading-bar-container {
+      height: 3px;
+      background: #1a1a1a;
+      position: relative;
+      overflow: hidden;
+      display: none;
+    }
+
+    #loading-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ff00, #44d62c, #00ff00);
+      background-size: 200% 100%;
+      animation: shimmer 1s linear infinite;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 8px #00ff00;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* =============================================
+       MAIN CONTENT
+    ============================================= */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* =============================================
+       SUMMARY BANNER
+    ============================================= */
+    #summary-banner {
+      border: 1px solid #1a1a1a;
+      background: #111111;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      transition: all 0.4s ease;
+      opacity: 0;
+      animation: fadein 0.5s ease 0.1s forwards;
+    }
+
+    @keyframes fadein {
+      to { opacity: 1; }
+    }
+
+    #summary-banner.healthy {
+      border-color: #00ff00;
+      box-shadow: 0 0 20px rgba(0,255,0,0.2), inset 0 0 30px rgba(0,255,0,0.03);
+    }
+
+    #summary-banner.degraded {
+      border-color: #ffcc00;
+      box-shadow: 0 0 20px rgba(255,204,0,0.2), inset 0 0 30px rgba(255,204,0,0.03);
+    }
+
+    #summary-banner.critical {
+      border-color: #ff0000;
+      box-shadow: 0 0 20px rgba(255,0,0,0.2), inset 0 0 30px rgba(255,0,0,0.03);
+    }
+
+    #summary-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+    .stat-total .stat-num { color: #ffffff; }
+    .stat-pass .stat-num { color: #00ff00; text-shadow: 0 0 8px rgba(0,255,0,0.5); }
+    .stat-fail .stat-num { color: #ff0000; text-shadow: 0 0 8px rgba(255,0,0,0.5); }
+    .stat-warn .stat-num { color: #ffcc00; text-shadow: 0 0 8px rgba(255,204,0,0.5); }
+
+    #health-score-block { text-align: center; }
+    #health-score {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    #health-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    #last-run {
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 1px;
+      margin-top: 8px;
+      grid-column: 1 / -1;
+    }
+
+    /* =============================================
+       SECTIONS
+    ============================================= */
+    .section {
+      background: #111111;
+      border: 1px solid #1a1a1a;
+      margin-bottom: 20px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      animation: fadein 0.5s ease forwards;
+      opacity: 0;
+    }
+
+    .section:hover {
+      border-color: rgba(0,255,0,0.3);
+      box-shadow: 0 0 16px rgba(0,255,0,0.1);
+    }
+
+    .section-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0d0d0d;
+      border-left: 3px solid #00ff00;
+    }
+
+    .section-header h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #00ff00;
+      text-transform: uppercase;
+    }
+
+    .section-icon { font-size: 16px; }
+
+    .section-body { padding: 0; }
+
+    /* =============================================
+       CHECK ROWS
+    ============================================= */
+    .check-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      border-bottom: 1px solid #0f0f0f;
+      transition: background 0.2s;
+    }
+
+    .check-row:last-child { border-bottom: none; }
+    .check-row:hover { background: rgba(255,255,255,0.02); }
+
+    .check-row.checking { animation: row-pulse 1.5s ease-in-out infinite; }
+
+    @keyframes row-pulse {
+      0%, 100% { background: transparent; }
+      50% { background: rgba(0,255,0,0.03); }
+    }
+
+    .status-icon {
+      font-size: 18px;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0,255,0,0.2);
+      border-top-color: #00ff00;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .check-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .check-detail {
+      font-size: 12px;
+      color: #888;
+      margin-top: 1px;
+    }
+
+    .check-value {
+      font-size: 13px;
+      color: #aaa;
+      text-align: right;
+      font-family: 'Rajdhani', monospace;
+    }
+
+    .check-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 3px 10px;
+      text-transform: uppercase;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .badge-pass {
+      color: #00ff00;
+      border: 1px solid rgba(0,255,0,0.4);
+      text-shadow: 0 0 6px rgba(0,255,0,0.5);
+      box-shadow: 0 0 8px rgba(0,255,0,0.1);
+    }
+
+    .badge-fail {
+      color: #ff0000;
+      border: 1px solid rgba(255,0,0,0.4);
+      text-shadow: 0 0 6px rgba(255,0,0,0.5);
+    }
+
+    .badge-warn {
+      color: #ffcc00;
+      border: 1px solid rgba(255,204,0,0.4);
+      text-shadow: 0 0 6px rgba(255,204,0,0.5);
+    }
+
+    .badge-checking {
+      color: #00ff00;
+      border: 1px solid rgba(0,255,0,0.2);
+      opacity: 0.7;
+    }
+
+    /* Server rows — wider layout */
+    .server-row {
+      grid-template-columns: 36px 1fr 1fr auto auto;
+    }
+
+    .server-ip {
+      font-size: 12px;
+      color: #00ff00;
+      font-family: monospace;
+      opacity: 0.7;
+    }
+
+    /* =============================================
+       SYSINFO GRID
+    ============================================= */
+    .sysinfo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0;
+    }
+
+    .sysinfo-item {
+      padding: 14px 20px;
+      border-right: 1px solid #0f0f0f;
+      border-bottom: 1px solid #0f0f0f;
+    }
+
+    .sysinfo-item:hover { background: rgba(255,255,255,0.02); }
+
+    .sysinfo-label {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .sysinfo-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      word-break: break-all;
+    }
+
+    .sysinfo-value.green { color: #00ff00; text-shadow: 0 0 6px rgba(0,255,0,0.3); }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    footer {
+      max-width: 1100px;
+      margin: 8px auto 32px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #00ff00, transparent);
+      box-shadow: 0 0 8px rgba(0,255,0,0.4);
+      margin-bottom: 20px;
+    }
+
+    .footer-content {
+      background: #111111;
+      border: 1px solid #1a1a1a;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-info { font-size: 13px; color: #888; line-height: 1.8; }
+    .footer-info strong { color: #00ff00; }
+    .footer-info a { color: #44d62c; text-decoration: none; }
+    .footer-info a:hover { text-decoration: underline; }
+
+    /* =============================================
+       TOAST
+    ============================================= */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: #111;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 12px 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 20px rgba(0,255,0,0.3);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =============================================
+       PDF OVERLAY
+    ============================================= */
+    #pdf-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 9998;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #pdf-overlay.show { display: flex; }
+
+    #pdf-overlay p {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: #00ff00;
+      letter-spacing: 2px;
+    }
+
+    .pdf-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(0,255,0,0.2);
+      border-top-color: #00ff00;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      box-shadow: 0 0 16px rgba(0,255,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     HEADER
+============================================= -->
+<header>
+  <img id="header-logo" src="logo/razer-logo.png" alt="Razer Logo" height="60" />
+
+  <div id="header-title">
+    <h1>Razer IT Diagnostic Tool</h1>
+    <div class="subtitle">System &amp; Network Health Monitor</div>
+  </div>
+
+  <div id="header-right">
+    <div id="live-badge">
+      <div id="live-dot"></div>
+      LIVE
+    </div>
+    <div id="clock">--</div>
+  </div>
+</header>
+
+<!-- EXPORT BAR -->
+<div id="export-bar">
+  <button class="btn btn-run" onclick="runDiagnostics()">&#x27F3; RUN DIAGNOSTICS</button>
+  <button class="btn" onclick="copyReport()">&#x1F4CB; Copy Report</button>
+  <button class="btn" onclick="downloadTxt()">&#x1F4BE; Download TXT</button>
+  <button class="btn" onclick="savePdf()">&#x1F4C4; Save as PDF</button>
+</div>
+
+<!-- LOADING BAR -->
+<div id="loading-bar-container">
+  <div id="loading-bar"></div>
+</div>
+
+<!-- MAIN -->
+<main id="main-content">
+
+  <!-- SUMMARY BANNER -->
+  <div id="summary-banner">
+    <div id="summary-stats">
+      <div class="stat-item stat-total">
+        <div class="stat-num" id="stat-total">--</div>
+        <div class="stat-label">Total Checks</div>
+      </div>
+      <div class="stat-item stat-pass">
+        <div class="stat-num" id="stat-pass">--</div>
+        <div class="stat-label">Passed</div>
+      </div>
+      <div class="stat-item stat-fail">
+        <div class="stat-num" id="stat-fail">--</div>
+        <div class="stat-label">Failed</div>
+      </div>
+      <div class="stat-item stat-warn">
+        <div class="stat-num" id="stat-warn">--</div>
+        <div class="stat-label">Warnings</div>
+      </div>
+    </div>
+    <div id="health-score-block">
+      <div id="health-score" style="color:#00ff00;">--</div>
+      <div id="health-label" style="color:#00ff00;">HEALTH SCORE</div>
+    </div>
+    <div id="last-run">Last run: never</div>
+  </div>
+
+  <!-- SYSTEM INFO -->
+  <div class="section" style="animation-delay:0.05s">
+    <div class="section-header">
+      <span class="section-icon">&#x1F4BB;</span>
+      <h2>System Information</h2>
+    </div>
+    <div class="section-body">
+      <div class="sysinfo-grid" id="sysinfo-grid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- NETWORK CHECKS -->
+  <div class="section" style="animation-delay:0.1s">
+    <div class="section-header">
+      <span class="section-icon">&#x1F310;</span>
+      <h2>Network Checks</h2>
+    </div>
+    <div class="section-body" id="network-section">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- SERVER CONNECTIVITY -->
+  <div class="section" style="animation-delay:0.15s">
+    <div class="section-header">
+      <span class="section-icon">&#x1F5A5;</span>
+      <h2>Server Connectivity</h2>
+    </div>
+    <div class="section-body" id="server-section">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- PORT CHECKS -->
+  <div class="section" style="animation-delay:0.2s">
+    <div class="section-header">
+      <span class="section-icon">&#x1F50C;</span>
+      <h2>Port Checks</h2>
+    </div>
+    <div class="section-body" id="port-section">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-divider"></div>
+  <div class="footer-content">
+    <div class="footer-info">
+      <strong>Razer Inc. — IT Support</strong><br>
+      Email: <a href="mailto:itsupport-test@razer.com">itsupport-test@razer.com</a><br>
+      Helpdesk: <a href="https://test.razer.com" target="_blank">test.razer.com</a>
+    </div>
+    <button class="btn" onclick="emailSupport()" style="font-size:14px;padding:10px 20px;">
+      &#x1F4E7; Email IT Support
+    </button>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- PDF OVERLAY -->
+<div id="pdf-overlay">
+  <div class="pdf-spinner"></div>
+  <p>GENERATING PDF...</p>
+</div>
+
+<!-- =============================================
+     JAVASCRIPT
+============================================= -->
+<script>
+// ==============================================
+// CONFIGURATION — edit these values
+// ==============================================
+const CONFIG = {
+  companyName: 'Razer Inc.',
+  itEmail: 'itsupport-test@razer.com',
+  helpdeskUrl: 'https://test.razer.com',
+  appName: 'SAP / Oracle / Custom ERP',
+
+  servers: [
+    { name: 'Primary App Server',  ip: '192.168.1.100' },
+    { name: 'Secondary App Server',ip: '192.168.1.101' },
+    { name: 'Domain Controller',   ip: '192.168.1.10'  },
+    { name: 'File Server',         ip: '192.168.1.20'  },
+    { name: 'Database Server',     ip: '192.168.1.30'  },
+    { name: 'DNS Server',          ip: '192.168.1.5'   },
+  ],
+
+  ports: [
+    { port: 80,   service: 'HTTP',                  host: '192.168.1.100' },
+    { port: 443,  service: 'HTTPS',                 host: '192.168.1.100' },
+    { port: 8080, service: 'Application Portal',    host: '192.168.1.100' },
+    { port: 3389, service: 'Remote Desktop (RDP)',  host: '192.168.1.100' },
+    { port: 1433, service: 'SQL Server Database',   host: '192.168.1.100' },
+    { port: 445,  service: 'File Sharing (SMB)',    host: '192.168.1.100' },
+  ],
+
+  // IP prefixes considered "corporate VPN"
+  vpnPrefixes: ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
+                '172.20.', '172.21.', '172.22.', '172.23.', '172.24.',
+                '172.25.', '172.26.', '172.27.', '172.28.', '172.29.',
+                '172.30.', '172.31.', '192.168.'],
+};
+
+// ==============================================
+// STATE
+// ==============================================
+let diagnosticResults = {};
+let sysInfo = {};
+let isRunning = false;
+
+// ==============================================
+// CLOCK
+// ==============================================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short',
+    day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ==============================================
+// UTILITIES
+// ==============================================
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function getBadge(status) {
+  const map = {
+    pass:     '<span class="check-badge badge-pass">PASS</span>',
+    fail:     '<span class="check-badge badge-fail">FAIL</span>',
+    warn:     '<span class="check-badge badge-warn">WARN</span>',
+    checking: '<span class="check-badge badge-checking"><span class="spinner"></span></span>',
+  };
+  return map[status] || map.checking;
+}
+
+function getIcon(status) {
+  return { pass: '✅', fail: '❌', warn: '⚠️', checking: '<span class="spinner"></span>' }[status] || '';
+}
+
+function timeout(ms, promise) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then(v => { clearTimeout(timer); resolve(v); })
+           .catch(e => { clearTimeout(timer); reject(e); });
+  });
+}
+
+// ==============================================
+// SYSTEM INFO
+// ==============================================
+function detectBrowser() {
+  const ua = navigator.userAgent;
+  // Use modern userAgentData if available (Chrome/Edge 90+)
+  const uad = navigator.userAgentData;
+  if (uad) {
+    const brand = uad.brands.find(b => b.brand === 'Microsoft Edge') ||
+                  uad.brands.find(b => b.brand === 'Google Chrome') ||
+                  uad.brands.find(b => !b.brand.includes('Not'));
+    if (brand) return `${brand.brand} ${brand.version}`;
+  }
+  if (ua.includes('Edg/')) return 'Microsoft Edge ' + (ua.match(/Edg\/([\d.]+)/)?.[1] || '');
+  if (ua.includes('Chrome/')) return 'Google Chrome ' + (ua.match(/Chrome\/([\d.]+)/)?.[1] || '');
+  if (ua.includes('Firefox/')) return 'Mozilla Firefox ' + (ua.match(/Firefox\/([\d.]+)/)?.[1] || '');
+  if (ua.includes('Safari/') && !ua.includes('Chrome')) return 'Apple Safari';
+  return ua.substring(0, 60);
+}
+
+async function detectOS() {
+  // Prefer userAgentData.getHighEntropyValues (Chrome/Edge) — gives accurate Windows 11 vs 10
+  if (navigator.userAgentData) {
+    try {
+      const hints = await navigator.userAgentData.getHighEntropyValues(['platform', 'platformVersion']);
+      const plat = hints.platform || navigator.userAgentData.platform || '';
+      if (plat === 'Windows') {
+        const major = parseInt(hints.platformVersion?.split('.')[0] || '0', 10);
+        if (major >= 13) return 'Windows 11';
+        if (major >= 1)  return 'Windows 10';
+        return 'Windows';
+      }
+      if (plat) return plat;
+    } catch {}
+    const plat = navigator.userAgentData.platform;
+    if (plat) return plat;
+  }
+  // Fallback: UA string (still works for Firefox, older browsers)
+  const ua = navigator.userAgent;
+  if (ua.includes('Windows NT 10.0')) return 'Windows 10/11';
+  if (ua.includes('Windows NT 6.3'))  return 'Windows 8.1';
+  if (ua.includes('Windows NT 6.1'))  return 'Windows 7';
+  if (ua.includes('Windows'))         return 'Windows';
+  if (ua.includes('Mac OS X')) return 'macOS ' + (ua.match(/Mac OS X ([\d_]+)/)?.[1]?.replace(/_/g,'.') || '');
+  if (ua.includes('Linux')) return 'Linux';
+  return navigator.platform || 'Unknown';
+}
+
+// WebRTC local IP — gives the actual LAN IP of the client machine
+function getLocalIPs() {
+  return new Promise(resolve => {
+    const ips = new Set();
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('');
+      pc.createOffer().then(o => pc.setLocalDescription(o));
+      pc.onicecandidate = e => {
+        if (!e.candidate) {
+          pc.close();
+          resolve([...ips]);
+          return;
+        }
+        const m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/g);
+        if (m) m.forEach(ip => { if (!ip.startsWith('0.') && ip !== '0.0.0.0') ips.add(ip); });
+      };
+      setTimeout(() => { try { pc.close(); } catch {} resolve([...ips]); }, 2000);
+    } catch {
+      resolve([]);
+    }
+  });
+}
+
+async function gatherSysInfo() {
+  const [os, localIPs] = await Promise.all([detectOS(), getLocalIPs()]);
+  const lanIps = localIPs.filter(ip => !ip.startsWith('169.254'));
+
+  sysInfo = {
+    // location.hostname is the URL host — "localhost" when using localhost:8080,
+    // or the real PC name if accessed via http://PCNAME:8080
+    hostname:    location.hostname,
+    localIPs:    lanIps.length ? lanIps.join(', ') : 'Not detected (enable WebRTC)',
+    browser:     detectBrowser(),
+    os,
+    resolution:  `${screen.width} × ${screen.height} (${window.devicePixelRatio}x DPR)`,
+    datetime:    new Date().toLocaleString(),
+    timezone:    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    language:    navigator.language,
+    publicIp:    'Fetching...',
+    username:    'Not accessible via browser',
+    cores:       navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical cores` : 'Unknown',
+    memory:      navigator.deviceMemory ? `~${navigator.deviceMemory} GB RAM` : 'Not reported',
+  };
+  renderSysInfo();
+}
+
+function renderSysInfo() {
+  const fields = [
+    { label: 'Hostname',         val: sysInfo.hostname,   green: true },
+    { label: 'Local IP Address', val: sysInfo.localIPs || '...', green: true },
+    { label: 'Browser',          val: sysInfo.browser },
+    { label: 'Operating System', val: sysInfo.os },
+    { label: 'Screen Resolution',val: sysInfo.resolution },
+    { label: 'Timezone',         val: sysInfo.timezone },
+    { label: 'Language',         val: sysInfo.language },
+    { label: 'Public IP',        val: sysInfo.publicIp,    green: sysInfo.publicIp !== 'Fetching...' },
+    { label: 'CPU Cores',        val: sysInfo.cores },
+    { label: 'RAM (approx)',     val: sysInfo.memory },
+    { label: 'Date / Time',      val: sysInfo.datetime },
+    { label: 'Username',         val: sysInfo.username },
+  ];
+
+  document.getElementById('sysinfo-grid').innerHTML = fields.map(f =>
+    `<div class="sysinfo-item">
+      <div class="sysinfo-label">${f.label}</div>
+      <div class="sysinfo-value${f.green ? ' green' : ''}">${f.val}</div>
+    </div>`
+  ).join('');
+}
+
+async function fetchPublicIp() {
+  try {
+    const r = await timeout(5000, fetch('https://api.ipify.org?format=json'));
+    const d = await r.json();
+    sysInfo.publicIp = d.ip;
+  } catch {
+    sysInfo.publicIp = 'Unable to fetch';
+  }
+  renderSysInfo();
+}
+
+// ==============================================
+// NETWORK CHECKS
+// ==============================================
+const networkChecks = [
+  { id: 'internet', name: 'Internet Connectivity', detail: 'Fetching https://www.google.com', status: 'checking', value: '' },
+  { id: 'dns',      name: 'DNS Resolution',         detail: 'Resolving external hostname',    status: 'checking', value: '' },
+  { id: 'vpn',      name: 'VPN Detection',          detail: 'Analyzing IP address range',     status: 'checking', value: '' },
+  { id: 'latency',  name: 'Network Latency',        detail: 'Measuring round-trip time',      status: 'checking', value: '' },
+];
+
+function renderNetworkSection() {
+  document.getElementById('network-section').innerHTML =
+    networkChecks.map(c => checkRowHtml(c)).join('');
+}
+
+function updateNetworkRow(id, status, value) {
+  const check = networkChecks.find(c => c.id === id);
+  if (check) { check.status = status; check.value = value; }
+  renderNetworkSection();
+}
+
+async function runNetworkChecks() {
+  renderNetworkSection();
+
+  // Internet connectivity
+  try {
+    const t0 = performance.now();
+    await timeout(6000, fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' }));
+    const ms = Math.round(performance.now() - t0);
+    updateNetworkRow('internet', 'pass', `${ms} ms`);
+    diagnosticResults.internet = { status: 'pass', value: `${ms} ms` };
+  } catch {
+    updateNetworkRow('internet', 'fail', 'Unreachable');
+    diagnosticResults.internet = { status: 'fail', value: 'Unreachable' };
+  }
+
+  // DNS resolution (piggybacks on a known CDN request)
+  try {
+    const t0 = performance.now();
+    await timeout(5000, fetch('https://cdnjs.cloudflare.com/robots.txt', { mode: 'no-cors', cache: 'no-store' }));
+    const ms = Math.round(performance.now() - t0);
+    updateNetworkRow('dns', 'pass', `${ms} ms`);
+    diagnosticResults.dns = { status: 'pass', value: `${ms} ms` };
+  } catch {
+    updateNetworkRow('dns', 'fail', 'Failed');
+    diagnosticResults.dns = { status: 'fail', value: 'Failed' };
+  }
+
+  // VPN detection (uses public IP already fetched)
+  await waitForPublicIp();
+  const ip = sysInfo.publicIp || '';
+  const vpnMatch = CONFIG.vpnPrefixes.some(p => ip.startsWith(p));
+  if (ip === 'Unable to fetch' || ip === 'Fetching...') {
+    updateNetworkRow('vpn', 'warn', 'IP unknown');
+    diagnosticResults.vpn = { status: 'warn', value: 'IP unknown' };
+  } else if (vpnMatch) {
+    updateNetworkRow('vpn', 'pass', `VPN: ${ip}`);
+    diagnosticResults.vpn = { status: 'pass', value: `VPN detected (${ip})` };
+  } else {
+    updateNetworkRow('vpn', 'warn', `No VPN: ${ip}`);
+    diagnosticResults.vpn = { status: 'warn', value: `No VPN detected (${ip})` };
+  }
+
+  // Latency average (re-ping google 3 times)
+  try {
+    const times = [];
+    for (let i = 0; i < 3; i++) {
+      const t0 = performance.now();
+      await timeout(4000, fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' }));
+      times.push(Math.round(performance.now() - t0));
+    }
+    const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+    const status = avg < 150 ? 'pass' : avg < 400 ? 'warn' : 'fail';
+    updateNetworkRow('latency', status, `${avg} ms avg`);
+    diagnosticResults.latency = { status, value: `${avg} ms avg` };
+  } catch {
+    updateNetworkRow('latency', 'fail', 'Timeout');
+    diagnosticResults.latency = { status: 'fail', value: 'Timeout' };
+  }
+}
+
+function waitForPublicIp() {
+  return new Promise(resolve => {
+    if (sysInfo.publicIp && sysInfo.publicIp !== 'Fetching...') return resolve();
+    let tries = 0;
+    const iv = setInterval(() => {
+      if (sysInfo.publicIp !== 'Fetching...' || ++tries > 30) {
+        clearInterval(iv); resolve();
+      }
+    }, 200);
+  });
+}
+
+// ==============================================
+// SERVER CHECKS
+// ==============================================
+let serverResults = CONFIG.servers.map(s => ({ ...s, status: 'checking', ms: '' }));
+
+function checkRowHtml(c) {
+  return `
+    <div class="check-row ${c.status === 'checking' ? 'checking' : ''}">
+      <div class="status-icon">${c.status === 'checking' ? '<span class="spinner"></span>' : getIcon(c.status)}</div>
+      <div>
+        <div class="check-name">${c.name}</div>
+        <div class="check-detail">${c.detail || ''}</div>
+      </div>
+      <div class="check-value">${c.value || ''}</div>
+      ${getBadge(c.status)}
+    </div>`;
+}
+
+function serverRowHtml(s) {
+  return `
+    <div class="check-row server-row ${s.status === 'checking' ? 'checking' : ''}">
+      <div class="status-icon">${s.status === 'checking' ? '<span class="spinner"></span>' : getIcon(s.status)}</div>
+      <div>
+        <div class="check-name">${s.name}</div>
+      </div>
+      <div class="server-ip">${s.ip}</div>
+      <div class="check-value">${s.ms}</div>
+      ${getBadge(s.status)}
+    </div>`;
+}
+
+function renderServerSection() {
+  document.getElementById('server-section').innerHTML =
+    serverResults.map(s => serverRowHtml(s)).join('');
+}
+
+async function pingServer(ip) {
+  // Browsers can't ICMP ping; we attempt HTTP fetch to the IP
+  const t0 = performance.now();
+  try {
+    await timeout(4000, fetch(`http://${ip}`, { mode: 'no-cors', cache: 'no-store' }));
+    return { reachable: true, ms: Math.round(performance.now() - t0) };
+  } catch (e) {
+    // A network error (not CORS) means unreachable; CORS error means reachable
+    const ms = Math.round(performance.now() - t0);
+    // If we got a response quickly it's likely a CORS block on a live host
+    if (ms < 3500 && e.message && !e.message.includes('timeout')) {
+      return { reachable: true, ms };
+    }
+    return { reachable: false, ms };
+  }
+}
+
+async function runServerChecks() {
+  serverResults = CONFIG.servers.map(s => ({ ...s, status: 'checking', ms: '' }));
+  renderServerSection();
+
+  await Promise.all(serverResults.map(async (srv, i) => {
+    const result = await pingServer(srv.ip);
+    serverResults[i].status = result.reachable ? 'pass' : 'fail';
+    serverResults[i].ms = result.reachable ? `${result.ms} ms` : 'Timeout';
+    renderServerSection();
+  }));
+
+  diagnosticResults.servers = serverResults.map(s => ({ name: s.name, ip: s.ip, status: s.status, ms: s.ms }));
+}
+
+// ==============================================
+// PORT CHECKS
+// ==============================================
+let portResults = CONFIG.ports.map(p => ({ ...p, status: 'checking', detail: '' }));
+
+function portRowHtml(p) {
+  return `
+    <div class="check-row ${p.status === 'checking' ? 'checking' : ''}">
+      <div class="status-icon">${p.status === 'checking' ? '<span class="spinner"></span>' : getIcon(p.status)}</div>
+      <div>
+        <div class="check-name">Port ${p.port} — ${p.service}</div>
+        <div class="check-detail">${p.host}</div>
+      </div>
+      <div class="check-value">${p.detail}</div>
+      ${getBadge(p.status)}
+    </div>`;
+}
+
+function renderPortSection() {
+  document.getElementById('port-section').innerHTML =
+    portResults.map(p => portRowHtml(p)).join('');
+}
+
+async function checkPort(host, port) {
+  return new Promise(resolve => {
+    const t0 = performance.now();
+
+    // Strategy 1: WebSocket
+    try {
+      const ws = new WebSocket(`ws://${host}:${port}`);
+      const done = (open) => {
+        try { ws.close(); } catch {}
+        resolve({ open, ms: Math.round(performance.now() - t0) });
+      };
+      ws.onopen  = () => done(true);
+      ws.onerror = () => {
+        const ms = Math.round(performance.now() - t0);
+        // Quick error = port responded (just refused WS upgrade); slow = truly closed
+        resolve({ open: ms < 3000, ms });
+      };
+      setTimeout(() => { try { ws.close(); } catch {} resolve({ open: false, ms: 4000 }); }, 4000);
+    } catch {
+      resolve({ open: false, ms: 4000 });
+    }
+  });
+}
+
+async function runPortChecks() {
+  portResults = CONFIG.ports.map(p => ({ ...p, status: 'checking', detail: '' }));
+  renderPortSection();
+
+  await Promise.all(portResults.map(async (p, i) => {
+    const result = await checkPort(p.host, p.port);
+    portResults[i].status = result.open ? 'pass' : 'fail';
+    portResults[i].detail = result.open ? `Open (${result.ms} ms)` : 'Closed / Filtered';
+    renderPortSection();
+  }));
+
+  diagnosticResults.ports = portResults.map(p => ({ port: p.port, service: p.service, status: p.status, detail: p.detail }));
+}
+
+// ==============================================
+// SUMMARY
+// ==============================================
+function updateSummary() {
+  const allStatuses = [
+    ...networkChecks.map(c => c.status),
+    ...serverResults.map(s => s.status),
+    ...portResults.map(p => p.status),
+  ].filter(s => s !== 'checking');
+
+  const total = allStatuses.length;
+  const passed = allStatuses.filter(s => s === 'pass').length;
+  const failed = allStatuses.filter(s => s === 'fail').length;
+  const warned = allStatuses.filter(s => s === 'warn').length;
+  const score = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pass').textContent  = passed;
+  document.getElementById('stat-fail').textContent  = failed;
+  document.getElementById('stat-warn').textContent  = warned;
+
+  const scoreEl = document.getElementById('health-score');
+  const labelEl = document.getElementById('health-label');
+  const banner  = document.getElementById('summary-banner');
+
+  scoreEl.textContent = `${score}%`;
+  banner.className = '';
+
+  if (score >= 90) {
+    scoreEl.style.color = '#00ff00'; scoreEl.style.textShadow = '0 0 20px rgba(0,255,0,0.6)';
+    labelEl.style.color = '#00ff00'; labelEl.textContent = 'HEALTHY';
+    banner.classList.add('healthy');
+  } else if (score >= 60) {
+    scoreEl.style.color = '#ffcc00'; scoreEl.style.textShadow = '0 0 20px rgba(255,204,0,0.6)';
+    labelEl.style.color = '#ffcc00'; labelEl.textContent = 'DEGRADED';
+    banner.classList.add('degraded');
+  } else {
+    scoreEl.style.color = '#ff0000'; scoreEl.style.textShadow = '0 0 20px rgba(255,0,0,0.6)';
+    labelEl.style.color = '#ff0000'; labelEl.textContent = 'CRITICAL';
+    banner.classList.add('critical');
+  }
+}
+
+// ==============================================
+// LOADING BAR
+// ==============================================
+function setLoadingProgress(pct) {
+  document.getElementById('loading-bar').style.width = pct + '%';
+}
+
+// ==============================================
+// MAIN DIAGNOSTIC RUNNER
+// ==============================================
+async function runDiagnostics() {
+  if (isRunning) return;
+  isRunning = true;
+  diagnosticResults = {};
+
+  // Show loading bar
+  const lbc = document.getElementById('loading-bar-container');
+  lbc.style.display = 'block';
+  setLoadingProgress(5);
+
+  await gatherSysInfo();
+  setLoadingProgress(10);
+
+  // Reset summary
+  ['stat-total','stat-pass','stat-fail','stat-warn'].forEach(id => {
+    document.getElementById(id).textContent = '--';
+  });
+  document.getElementById('health-score').textContent = '--';
+  document.getElementById('health-label').textContent = 'HEALTH SCORE';
+  document.getElementById('summary-banner').className = '';
+
+  // Run in parallel with staged progress
+  const ipPromise = fetchPublicIp();
+  const netPromise = runNetworkChecks();
+
+  setLoadingProgress(20);
+  const serverPromise = runServerChecks();
+  setLoadingProgress(30);
+  const portPromise = runPortChecks();
+  setLoadingProgress(50);
+
+  await netPromise;
+  setLoadingProgress(70);
+  await serverPromise;
+  setLoadingProgress(85);
+  await portPromise;
+  await ipPromise;
+  setLoadingProgress(100);
+
+  updateSummary();
+
+  document.getElementById('last-run').textContent =
+    'Last run: ' + new Date().toLocaleString();
+
+  setTimeout(() => {
+    lbc.style.display = 'none';
+    setLoadingProgress(0);
+  }, 800);
+
+  isRunning = false;
+}
+
+// ==============================================
+// REPORT BUILDER
+// ==============================================
+function buildReport() {
+  const now = new Date().toLocaleString();
+  const lines = [
+    '============================================================',
+    '  RAZER IT DIAGNOSTIC REPORT',
+    '============================================================',
+    `  Generated : ${now}`,
+    `  Hostname  : ${sysInfo.hostname}`,
+    `  Browser   : ${sysInfo.browser}`,
+    `  OS        : ${sysInfo.os}`,
+    `  Public IP : ${sysInfo.publicIp}`,
+    `  Timezone  : ${sysInfo.timezone}`,
+    '============================================================',
+    '',
+    '-- NETWORK CHECKS --',
+    ...networkChecks.map(c =>
+      `  [${c.status.toUpperCase().padEnd(7)}] ${c.name.padEnd(28)} ${c.value}`),
+    '',
+    '-- SERVER CONNECTIVITY --',
+    ...serverResults.map(s =>
+      `  [${s.status.toUpperCase().padEnd(7)}] ${s.name.padEnd(28)} ${s.ip.padEnd(18)} ${s.ms}`),
+    '',
+    '-- PORT CHECKS --',
+    ...portResults.map(p =>
+      `  [${p.status.toUpperCase().padEnd(7)}] Port ${String(p.port).padEnd(6)} ${p.service.padEnd(28)} ${p.detail}`),
+    '',
+    '============================================================',
+    `  IT Support : ${CONFIG.itEmail}`,
+    `  Helpdesk   : ${CONFIG.helpdeskUrl}`,
+    '============================================================',
+  ];
+  return lines.join('\n');
+}
+
+// ==============================================
+// EXPORT: COPY
+// ==============================================
+async function copyReport() {
+  try {
+    await navigator.clipboard.writeText(buildReport());
+    showToast('Copied to clipboard!');
+  } catch {
+    showToast('Copy failed — try Download TXT');
+  }
+}
+
+// ==============================================
+// EXPORT: TXT
+// ==============================================
+function downloadTxt() {
+  const filename = `RazerDiagnostic_${sysInfo.hostname}_${datestamp()}.txt`;
+  const blob = new Blob([buildReport()], { type: 'text/plain' });
+  triggerDownload(URL.createObjectURL(blob), filename);
+  showToast('Downloading TXT...');
+}
+
+function datestamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ==============================================
+// EXPORT: PDF
+// ==============================================
+async function savePdf() {
+  const overlay = document.getElementById('pdf-overlay');
+  overlay.classList.add('show');
+
+  // Freeze CSS animations before capture — elements starting at opacity:0
+  // (fadein animation) would otherwise be invisible in the screenshot.
+  const freezeStyle = document.createElement('style');
+  freezeStyle.id = 'pdf-freeze';
+  freezeStyle.textContent = `
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .section, #summary-banner { opacity: 1 !important; }
+  `;
+  document.head.appendChild(freezeStyle);
+  // Wait two frames so the browser applies the overrides before html2canvas runs
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const content = document.getElementById('main-content');
+
+    const canvas = await html2canvas(content, {
+      backgroundColor: '#0a0a0a',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      windowWidth:  content.scrollWidth,
+      windowHeight: content.scrollHeight,
+    });
+
+    // Restore animations immediately after capture
+    document.getElementById('pdf-freeze')?.remove();
+
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();   // 210 mm
+    const pageH = pdf.internal.pageSize.getHeight();  // 297 mm
+
+    const HEADER_H  = 14;  // mm
+    const FOOTER_H  = 8;   // mm
+    const CONTENT_H = pageH - HEADER_H - FOOTER_H;   // 275 mm usable per page
+
+    // How many canvas pixels equal one mm on the PDF
+    const pxPerMm = canvas.width / pageW;
+    // Content slot height in source canvas pixels
+    const contentHpx = Math.round(CONTENT_H * pxPerMm);
+
+    const totalPages = Math.ceil(canvas.height / contentHpx);
+    const now = new Date().toLocaleString();
+
+    function drawHeader(pageNum) {
+      pdf.setFillColor(10, 10, 10);
+      pdf.rect(0, 0, pageW, HEADER_H, 'F');
+      // Razer green accent line
+      pdf.setFillColor(0, 255, 0);
+      pdf.rect(0, 0, pageW, 2.5, 'F');
+      pdf.setTextColor(0, 255, 0);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('RAZER IT DIAGNOSTIC REPORT', 8, 9.5);
+      pdf.setTextColor(180, 180, 180);
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${now}   |   Page ${pageNum} of ${totalPages}`, pageW - 8, 9.5, { align: 'right' });
+    }
+
+    function drawFooter() {
+      pdf.setFontSize(7);
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(
+        `Generated by Razer IT Diagnostic Tool | ${CONFIG.itEmail}`,
+        pageW / 2, pageH - 2.5, { align: 'center' }
+      );
+    }
+
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) pdf.addPage();
+
+      drawHeader(page + 1);
+      drawFooter();
+
+      // Slice the source canvas for this page only
+      const srcY = page * contentHpx;
+      const srcH = Math.min(contentHpx, canvas.height - srcY);
+
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width  = canvas.width;
+      sliceCanvas.height = contentHpx;  // fixed slot; dark-fill for last partial page
+      const ctx = sliceCanvas.getContext('2d');
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+      ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+      pdf.addImage(sliceData, 'JPEG', 0, HEADER_H, pageW, CONTENT_H);
+    }
+
+    // Sanitise hostname for use in filename
+    const rawHost = (sysInfo.localIPs || sysInfo.hostname || 'host')
+      .split(',')[0].trim().replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filename = `RazerDiagnostic_${rawHost}_${datestamp()}.pdf`;
+    pdf.save(filename);
+    showToast('PDF downloaded!');
+  } catch (err) {
+    console.error(err);
+    showToast('PDF generation failed — check console');
+  } finally {
+    document.getElementById('pdf-freeze')?.remove();
+    overlay.classList.remove('show');
+  }
+}
+
+// ==============================================
+// EMAIL SUPPORT
+// ==============================================
+function emailSupport() {
+  const subject = encodeURIComponent(`IT Diagnostic Report — ${sysInfo.hostname} — ${new Date().toLocaleDateString()}`);
+  const body = encodeURIComponent(buildReport());
+  window.location.href = `mailto:${CONFIG.itEmail}?subject=${subject}&body=${body}`;
+}
+
+// ==============================================
+// AUTO-START
+// ==============================================
+window.addEventListener('load', () => {
+  // Stagger section fade-ins
+  document.querySelectorAll('.section').forEach((el, i) => {
+    el.style.animationDelay = `${0.05 + i * 0.08}s`;
+  });
+  runDiagnostics();
+});
+</script>
+</body>
+</html>
